@@ -8,7 +8,6 @@ on:
 
 permissions:
   contents: read
-  actions: write # the keep-alive step
 
 concurrency:
   group: sync
@@ -21,9 +20,4 @@ jobs:
       - run: node sync.mjs
         env:
           NOTION_API_TOKEN: ${{ secrets.NOTION_API_TOKEN }}
-          GH_TOKEN: ${{ github.token }}
-      # GitHub disables the schedule of a public repository after 60 days without activity: enabling the workflow
-      # through the API resets the count, as gautamkrishnar/keepalive-workflow does
-      - run: gh api -X PUT "repos/$GITHUB_REPOSITORY/actions/workflows/sync.yml/enable"
-        env:
           GH_TOKEN: ${{ github.token }}
