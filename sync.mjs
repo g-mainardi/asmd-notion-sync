@@ -2,13 +2,12 @@
 // - every pull request gets a page with its title, number, type, state, author, branches, dates and link, written only
 //   when one of them changed;
 // - the Tasks relation belongs to Notion and is never written here, so the shared repo carries no Notion links;
-// - when a pull request turns Merged, each of its tasks moves to Completato once none of the task's pull requests is
-//   still open.
+// - the tasks are never written either: a task moves to Completato only by hand, since a merged pull request can cover
+//   just part of it.
 import { fileURLToPath } from 'node:url';
 
 const REPO = 'g-mainardi/experiment-2025-llm-with-simulation-in-the-loop';
 const PULLS = '424f720c-4b16-8184-965a-000b729684da'; // data source of the Pull Requests database
-const DONE = 'Completato'; // the complete option of Stato in the tasks database
 
 export function state(pr) {
   if (pr.merged_at) return 'Merged';
@@ -85,24 +84,6 @@ async function query(filter) {
   return pages;
 }
 
-async function complete(page) {
-  for (const { id: task } of page.properties.Tasks.relation) {
-    const open = await query({
-      and: [
-        { property: 'Tasks', relation: { contains: task } },
-        { property: 'State', status: { does_not_equal: 'Merged' } },
-        { property: 'State', status: { does_not_equal: 'Closed' } },
-      ],
-    });
-    const others = open.filter((p) => p.id !== page.id).map((p) => p.url);
-    if (others.length) console.log(`task ${task} stays: still open ${others.join(' ')}`);
-    else {
-      await notion(`pages/${task}`, 'PATCH', { properties: { Stato: { status: { name: DONE } } } });
-      console.log(`task ${task} ${DONE}`);
-    }
-  }
-}
-
 async function main() {
   if (!process.env.NOTION_API_TOKEN) throw new Error('NOTION_API_TOKEN is not set');
   const pages = new Map((await query()).map((p) => [p.properties.Number.number, p]));
@@ -110,8 +91,6 @@ async function main() {
     const props = properties(pr);
     const page = pages.get(pr.number);
     if (page && values(page.properties) === values(props)) continue;
-    // Tasks before the page: if the run stops in between, the next one still sees the pull request turn Merged
-    if (page && state(pr) === 'Merged' && page.properties.State.status?.name !== 'Merged') await complete(page);
     if (page) await notion(`pages/${page.id}`, 'PATCH', { properties: props });
     else await notion('pages', 'POST', { parent: { data_source_id: PULLS }, properties: props });
     console.log(`#${pr.number} ${page ? 'updated' : 'created'}: ${state(pr)}`);

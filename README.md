@@ -6,7 +6,7 @@ Every 15 minutes [`notion-sync.yml`](.github/workflows/notion-sync.yml) runs [`s
 
 - creates or updates one page per pull request (title, number, Conventional Commits type, state, author, branch, base branch, dates, link), writing only when something changed;
 - leaves the Tasks relation alone: tasks are linked to pull requests from Notion;
-- when a pull request turns Merged, moves each of its tasks to Completato once none of the task's pull requests is still open.
+- never changes the tasks: a task moves to Completato only by hand, since a merged pull request can cover just part of it.
 
 ## Setup
 
